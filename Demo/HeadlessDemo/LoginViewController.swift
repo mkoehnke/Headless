@@ -38,8 +38,8 @@ class LoginViewController : UIViewController {
     
     func submitLoginForm(page: Page) -> Future<Page, Error> {
         if let form = page.formWith("form2") {
-            form["appleId"] = nameTextField.text
-            form["accountPassword"] = passwordTextField.text
+            form["appleId"] = "mathias.koehnke@gmail.com" //nameTextField.text
+            form["accountPassword"] = "InFezww20JvEYc" //passwordTextField.text
             return headless.submit(form)
         }
         return Future(error: Error.NetworkRequestFailure)

@@ -53,6 +53,10 @@ public class ParserElement : NSObject {
         return element?.text() as String?
     }
     
+    public var content : String? {
+        return element?.content as String?
+    }
+    
     public var tagName : String? {
         return element?.tagName as String?
     }

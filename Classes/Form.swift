@@ -10,7 +10,7 @@ import Foundation
 
 public class Form : Element {
 
-    private var inputs = [String : String]()
+    var inputs = [String : String]()
     
     required public init?(element: AnyObject, pageURL: NSURL? = nil) {
         super.init(element: element, pageURL: pageURL)
@@ -25,6 +25,10 @@ public class Form : Element {
     
     private var onSubmit : String? {
         return objectForKey("onSubmit")
+    }
+    
+    public var name : String? {
+        return objectForKey("name")
     }
     
     public func actionRequest(customURL: NSURL? = nil) -> NSURLRequest? {

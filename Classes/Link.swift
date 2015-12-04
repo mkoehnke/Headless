@@ -18,6 +18,10 @@ public class Link : Element {
         return text
     }
     
+    public var linkText : String? {
+        return content
+    }
+    
     public var hrefURL : NSURL? {
         if let href = href, url = NSURL(string: href) {
             if let baseURL = baseURL where url.scheme.characters.count == 0 {
