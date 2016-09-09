@@ -9,13 +9,13 @@
 import Foundation
 
 /// HTML Button class, which represents the <button> element in the DOM.
-public class HTMLButton : HTMLRedirectable {
+open class HTMLButton : HTMLRedirectable {
 
     //========================================
     // MARK: Overrides
     //========================================
     
-    internal override class func createXPathQuery(parameters: String) -> String {
+    internal override class func createXPathQuery(_ parameters: String) -> String {
         return "//button\(parameters)"
     }
     

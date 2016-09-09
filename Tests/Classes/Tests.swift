@@ -39,7 +39,7 @@ class Tests: XCTestCase {
     }
     
     func testExecute() {
-        let expectation = expectationWithDescription("JavaScript Done.")
+        let expectation = self.expectation(description: "JavaScript Done.")
         
             browser.open(startURL())
         >>> browser.execute("document.title")
@@ -48,18 +48,18 @@ class Tests: XCTestCase {
             expectation.fulfill()
         }
         
-        waitForExpectationsWithTimeout(20.0, handler: nil)
+        waitForExpectations(timeout: 20.0, handler: nil)
     }
     
     func testInspect() {
-        let expectation = expectationWithDescription("Inspect Done.")
+        let expectation = self.expectation(description: "Inspect Done.")
         var originalPage : HTMLPage?
         
             browser.open(startURL())
         >>> browser.map { originalPage = $0 as HTMLPage }
         >>> browser.inspect
         === { (result: HTMLPage?) in
-            if let result = result, originalPage = originalPage {
+            if let result = result, let originalPage = originalPage {
                 XCTAssertEqual(result.data, originalPage.data)
             } else {
                 XCTAssert(false)
@@ -68,14 +68,14 @@ class Tests: XCTestCase {
             expectation.fulfill()
         }
         
-        waitForExpectationsWithTimeout(20.0, handler: nil)
+        waitForExpectations(timeout: 20.0, handler: nil)
     }
  
     func testButtonPress() {
-        let expectation = expectationWithDescription("Button Press Done.")
+        let expectation = self.expectation(description: "Button Press Done.")
         
         browser.open(startURL())        
-        >>> browser.get(by: .Name("button"))
+        >>> browser.get(by: .name("button"))
         >>> browser.press
         >>> browser.execute("document.title")
         === { (result: JavaScriptResult?) in
@@ -83,14 +83,14 @@ class Tests: XCTestCase {
             expectation.fulfill()
         }
         
-        waitForExpectationsWithTimeout(20.0, handler: nil)
+        waitForExpectations(timeout: 20.0, handler: nil)
     }
     
     func testFormSubmit() {
-        let expectation = expectationWithDescription("Form Submit Done.")
+        let expectation = self.expectation(description: "Form Submit Done.")
         
         browser.open(startURL())
-            >>> browser.get(by: .Id("test_form"))
+            >>> browser.get(by: .id("test_form"))
             >>> browser.submit
             >>> browser.execute("document.title")
             === { (result: JavaScriptResult?) in
@@ -98,11 +98,11 @@ class Tests: XCTestCase {
                 expectation.fulfill()
         }
         
-        waitForExpectationsWithTimeout(20.0, handler: nil)
+        waitForExpectations(timeout: 20.0, handler: nil)
     }
     
     func testFormWithXPathQuerySubmit() {
-        let expectation = expectationWithDescription("Form XPathQuery Submit Done.")
+        let expectation = self.expectation(description: "Form XPathQuery Submit Done.")
         
         browser.open(startURL())
             >>> browser.get(by: .XPathQuery("//form[1]"))
@@ -113,14 +113,14 @@ class Tests: XCTestCase {
                 expectation.fulfill()
         }
         
-        waitForExpectationsWithTimeout(20.0, handler: nil)
+        waitForExpectations(timeout: 20.0, handler: nil)
     }
     
     func testDivOnClick() {
-        let expectation = expectationWithDescription("DIV OnClick Done.")
+        let expectation = self.expectation(description: "DIV OnClick Done.")
     
         browser.open(startURL())
-            >>> browser.get(by: .Id("onClick_div"))
+            >>> browser.get(by: .id("onClick_div"))
             >>> browser.map { $0.objectForKey("onClick")! }
             >>> browser.execute
             >>> browser.inspect
@@ -130,14 +130,14 @@ class Tests: XCTestCase {
                 expectation.fulfill()
         }
         
-        waitForExpectationsWithTimeout(20.0, handler: nil)
+        waitForExpectations(timeout: 20.0, handler: nil)
     }
     
     func testDivHref() {
-        let expectation = expectationWithDescription("DIV Href Done.")
+        let expectation = self.expectation(description: "DIV Href Done.")
         
         browser.open(startURL())
-            >>> browser.get(by: .Id("href_div"))
+            >>> browser.get(by: .id("href_div"))
             >>> browser.map { "window.location.href='\($0.objectForKey("href")!)'" }
             >>> browser.execute
             >>> browser.inspect
@@ -147,11 +147,11 @@ class Tests: XCTestCase {
                 expectation.fulfill()
         }
         
-        waitForExpectationsWithTimeout(20.0, handler: nil)
+        waitForExpectations(timeout: 20.0, handler: nil)
     }
     
     func testUserAgent() {
-        let expectation = expectationWithDescription("UserAgent Test Done.")
+        let expectation = self.expectation(description: "UserAgent Test Done.")
         browser.userAgent = "WKZombie"
     
         browser.open(startURL())
@@ -161,11 +161,11 @@ class Tests: XCTestCase {
                 expectation.fulfill()
         }
         
-        waitForExpectationsWithTimeout(20.0, handler: nil)
+        waitForExpectations(timeout: 20.0, handler: nil)
     }
     
     func testSnapshot() {
-        let expectation = expectationWithDescription("Snapshot Test Done.")
+        let expectation = self.expectation(description: "Snapshot Test Done.")
 
         var snapshots = [Snapshot]()
         
@@ -176,7 +176,7 @@ class Tests: XCTestCase {
         
         browser.open(startURL())
         >>> browser.snap
-        >>> browser.get(by: .Name("button"))
+        >>> browser.get(by: .name("button"))
         >>> browser.press
         >>> browser.snap
         === { (result: HTMLPage?) in
@@ -184,11 +184,11 @@ class Tests: XCTestCase {
             expectation.fulfill()
         }
         
-        waitForExpectationsWithTimeout(20.0, handler: nil)
+        waitForExpectations(timeout: 20.0, handler: nil)
     }
     
     func testSwap() {
-        let expectation = expectationWithDescription("iframe Button Test Done.")
+        let expectation = self.expectation(description: "iframe Button Test Done.")
         
         browser.open(startURL())
         >>> browser.get(by: .XPathQuery("//iframe[@name='button_frame']"))
@@ -201,16 +201,16 @@ class Tests: XCTestCase {
             expectation.fulfill()
         }
         
-        waitForExpectationsWithTimeout(20.0, handler: nil)
+        waitForExpectations(timeout: 20.0, handler: nil)
     }
     
     //========================================
     // MARK: Helper Methods
     //========================================
     
-    private func startURL() -> NSURL {
-        let bundle = NSBundle(forClass: self.dynamicType)
-        let testPage = bundle.URLForResource("HTMLTestPage", withExtension: "html")!
+    private func startURL() -> URL {
+        let bundle = Bundle(for: type(of: self))
+        let testPage = bundle.url(forResource: "HTMLTestPage", withExtension: "html")!
         return testPage
     }
 }

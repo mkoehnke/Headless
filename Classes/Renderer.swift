@@ -25,7 +25,7 @@ import Foundation
 import WebKit
 
 
-typealias RenderCompletion = (result : AnyObject?, response: NSURLResponse?, error: NSError?) -> Void
+typealias RenderCompletion = (_ result : Any?, _ response: URLResponse?, _ error: Error?) -> Void
 
 internal class Renderer : NSObject {
     
@@ -40,27 +40,27 @@ internal class Renderer : NSObject {
         }
     }
     
-    var timeoutInSeconds : NSTimeInterval = 30.0
+    var timeoutInSeconds : TimeInterval = 30.0
     
-    private var renderQueue : NSOperationQueue = {
-        let instance = NSOperationQueue()
+    fileprivate var renderQueue : OperationQueue = {
+        let instance = OperationQueue()
         instance.maxConcurrentOperationCount = 1
-        instance.qualityOfService = .UserInitiated
+        instance.qualityOfService = .userInitiated
        return instance
     }()
     
-    private var webView : WKWebView!
+    fileprivate var webView : WKWebView!
     internal static let scrapingCommand = "document.documentElement.outerHTML"
     
     init(processPool: WKProcessPool? = nil) {
         super.init()
         let doneLoadingWithoutMediaContentScript = "window.webkit.messageHandlers.doneLoading.postMessage(\(Renderer.scrapingCommand));"
-        let doneLoadingUserScript = WKUserScript(source: doneLoadingWithoutMediaContentScript, injectionTime: .AtDocumentEnd, forMainFrameOnly: true)
+        let doneLoadingUserScript = WKUserScript(source: doneLoadingWithoutMediaContentScript, injectionTime: .atDocumentEnd, forMainFrameOnly: true)
         
         let getElementByXPathScript = "function getElementByXpath(path) { " +
                                       "   return document.evaluate(path, document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue; " +
                                       "}"
-        let getElementUserScript = WKUserScript(source: getElementByXPathScript, injectionTime: .AtDocumentEnd, forMainFrameOnly: false)
+        let getElementUserScript = WKUserScript(source: getElementByXPathScript, injectionTime: .atDocumentEnd, forMainFrameOnly: false)
         
         let contentController = WKUserContentController()
         contentController.addUserScript(doneLoadingUserScript)
@@ -80,17 +80,17 @@ internal class Renderer : NSObject {
         dispatch_sync_on_main_thread {
             let warning = "The keyWindow or contentView is missing."
             #if os(iOS)
-                let bounds = UIScreen.mainScreen().bounds
+                let bounds = UIScreen.main.bounds
                 self.webView = WKWebView(frame: bounds, configuration: config)
-                if let window = UIApplication.sharedApplication().keyWindow {
+                if let window = UIApplication.shared.keyWindow {
                     self.webView.alpha = 0.01
-                    window.insertSubview(self.webView, atIndex: 0)
+                    window.insertSubview(self.webView, at: 0)
                 } else {
                     Logger.log(warning)
                 }
             #elseif os(OSX)
                 self.webView = WKWebView(frame: CGRectZero, configuration: config)
-                if let window = NSApplication.sharedApplication().keyWindow, view = window.contentView {
+                if let window = NSApplication.sharedApplication().keyWindow, let view = window.contentView {
                     self.webView.frame = CGRect(origin: CGPointZero, size: view.frame.size)
                     self.webView.alphaValue = 0.01
                     view.addSubview(self.webView)
@@ -111,16 +111,16 @@ internal class Renderer : NSObject {
     // MARK: Render Page
     //========================================
     
-    internal func renderPageWithRequest(request: NSURLRequest, postAction: PostAction = .None, completionHandler: RenderCompletion) {
-        let requestBlock : (operation: RenderOperation) -> Void = { operation in
-            if let url = request.URL where url.fileURL {
-                operation.webView?.loadFileURL(url, allowingReadAccessToURL: url.URLByDeletingLastPathComponent ?? url)
+    internal func renderPageWithRequest(_ request: URLRequest, postAction: PostAction = .none, completionHandler: @escaping RenderCompletion) {
+        let requestBlock : (_ operation: RenderOperation) -> Void = { operation in
+            if let url = request.url , url.isFileURL {
+                _ = operation.webView?.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
             } else {
-                operation.webView?.loadRequest(request)
+                _ = operation.webView?.load(request)
             }
         }
         let operation = operationWithRequestBlock(requestBlock, postAction: postAction, completionHandler: completionHandler)
-        operation.name = "Request".uppercaseString + "\n\(request.URL?.absoluteString ?? String())"
+        operation.name = "Request".uppercased() + "\n\(request.url?.absoluteString ?? String())"
         renderQueue.addOperation(operation)
     }
     
@@ -129,23 +129,23 @@ internal class Renderer : NSObject {
     // MARK: Execute JavaScript
     //========================================
     
-    internal func executeScript(script: String, willLoadPage: Bool? = false, postAction: PostAction = .None, completionHandler: RenderCompletion?) {
-        var requestBlock : (operation : RenderOperation) -> Void
-        if let willLoadPage = willLoadPage where willLoadPage == true {
+    internal func executeScript(_ script: String, willLoadPage: Bool? = false, postAction: PostAction = .none, completionHandler: RenderCompletion?) {
+        var requestBlock : (_ operation : RenderOperation) -> Void
+        if let willLoadPage = willLoadPage , willLoadPage == true {
             requestBlock = { $0.webView?.evaluateJavaScript(script, completionHandler: nil) }
         } else {
             requestBlock = { operation in
                 operation.webView?.evaluateJavaScript(script, completionHandler: { result, error in
-                    var data : NSData?
+                    var data : Data?
                     if let result = result {
-                        data = "\(result)".dataUsingEncoding(NSUTF8StringEncoding)
+                        data = "\(result)".data(using: String.Encoding.utf8)
                     }
                     operation.completeRendering(operation.webView, result: data, error: error)
                 })
             }
         }
         let operation = operationWithRequestBlock(requestBlock, postAction: postAction, completionHandler: completionHandler)
-        operation.name = "Script".uppercaseString + "\n\(script ?? String())"
+        operation.name = "Script".uppercased() + "\n\(script )"
         renderQueue.addOperation(operation)
     }
     
@@ -153,24 +153,24 @@ internal class Renderer : NSObject {
     // MARK: Helper Methods
     //========================================
     
-    private func operationWithRequestBlock(requestBlock: (operation: RenderOperation) -> Void, postAction: PostAction = .None, completionHandler: RenderCompletion?) -> NSOperation {
+    fileprivate func operationWithRequestBlock(_ requestBlock: @escaping (_ operation: RenderOperation) -> Void, postAction: PostAction = .none, completionHandler: RenderCompletion?) -> Operation {
         let operation = RenderOperation(webView: webView, timeoutInSeconds: timeoutInSeconds)
         operation.loadMediaContent = loadMediaContent
         operation.postAction = postAction
         operation.completionBlock = { [weak operation] in
-            completionHandler?(result: operation?.result, response: operation?.response, error: operation?.error)
+            completionHandler?(operation?.result, operation?.response, operation?.error)
         }
         operation.requestBlock = requestBlock
         return operation
     }
     
-    internal func currentContent(completionHandler: RenderCompletion) {
+    internal func currentContent(_ completionHandler: @escaping RenderCompletion) {
         webView.evaluateJavaScript(Renderer.scrapingCommand.terminate()) { result, error in
-            var data : NSData?
+            var data : Data?
             if let result = result {
-                data = "\(result)".dataUsingEncoding(NSUTF8StringEncoding)
+                data = "\(result)".data(using: String.Encoding.utf8)
             }
-            completionHandler(result: data, response: nil, error: error)
+            completionHandler(data as AnyObject?, nil, error as Error?)
         }
     }
     
@@ -183,10 +183,10 @@ internal class Renderer : NSObject {
 
 extension Renderer {
     internal func clearCache() {
-        let distantPast = NSDate.distantPast()
-        NSHTTPCookieStorage.sharedHTTPCookieStorage().removeCookiesSinceDate(distantPast)
+        let distantPast = Date.distantPast
+        HTTPCookieStorage.shared.removeCookies(since: distantPast)
         let websiteDataTypes = Set([WKWebsiteDataTypeDiskCache, WKWebsiteDataTypeMemoryCache])
-        WKWebsiteDataStore.defaultDataStore().removeDataOfTypes(websiteDataTypes, modifiedSince: distantPast, completionHandler:{ })
+        WKWebsiteDataStore.default().removeData(ofTypes: websiteDataTypes, modifiedSince: distantPast, completionHandler:{ })
     }
 }
 
@@ -200,12 +200,12 @@ extension Renderer {
     internal func snapshot() -> Snapshot? {
         precondition(webView.superview != nil, "WKWebView has no superview. Cannot take snapshot.")
         UIGraphicsBeginImageContextWithOptions(webView.bounds.size, true, 0)
-        webView.scrollView.drawViewHierarchyInRect(webView.bounds, afterScreenUpdates: true)
+        webView.scrollView.drawHierarchy(in: webView.bounds, afterScreenUpdates: true)
         let snapshot = UIGraphicsGetImageFromCurrentImageContext()
         UIGraphicsEndImageContext()
 
-        if let data = UIImagePNGRepresentation(snapshot) {
-            return Snapshot(data: data, page: webView.URL)
+        if let data = UIImagePNGRepresentation(snapshot!) {
+            return Snapshot(data: data, page: webView.url)
         }
         return nil
     }

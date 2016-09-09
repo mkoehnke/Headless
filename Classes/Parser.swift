@@ -25,10 +25,10 @@ import Foundation
 import hpple
 
 /// Base class for the HTMLParser and JSONParser.
-public class Parser : NSObject {
+open class Parser : NSObject {
     
     /// The URL of the page.
-    public private(set) var url : NSURL?
+    open fileprivate(set) var url : URL?
     
     /**
      Returns a (HTML or JSON) parser instance for the specified data.
@@ -38,7 +38,7 @@ public class Parser : NSObject {
      
      - returns: A HTML or JSON page.
      */
-    required public init(data: NSData, url: NSURL? = nil) {
+    required public init(data: Data, url: URL? = nil) {
         super.init()
         self.url = url
     }
@@ -50,32 +50,32 @@ public class Parser : NSObject {
 //========================================
 
 /// A HTML Parser class, which wraps the functionality of the TFHpple class.
-public class HTMLParser : Parser {
+open class HTMLParser : Parser {
     
-    private var doc : TFHpple?
+    fileprivate var doc : TFHpple?
     
-    required public init(data: NSData, url: NSURL? = nil) {
+    required public init(data: Data, url: URL? = nil) {
         super.init(data: data, url: url)
-        self.doc = TFHpple(HTMLData: data)
+        self.doc = TFHpple(htmlData: data)
     }
     
-    public func searchWithXPathQuery(xPathOrCSS: String) -> [AnyObject]? {
-        return doc?.searchWithXPathQuery(xPathOrCSS)
+    open func searchWithXPathQuery(_ xPathOrCSS: String) -> [AnyObject]? {
+        return doc?.search(withXPathQuery: xPathOrCSS) as [AnyObject]?
     }
     
-    public var data: NSData? {
+    open var data: Data? {
         return doc?.data
     }
     
-    override public var description : String {
-        return (NSString(data: doc?.data ?? NSData(), encoding: NSUTF8StringEncoding) ?? "") as String
+    override open var description : String {
+        return (NSString(data: doc?.data ?? Data(), encoding: String.Encoding.utf8.rawValue) ?? "") as String
     }
 }
 
 /// A HTML Parser Element class, which wraps the functionality of the TFHppleElement class.
-public class HTMLParserElement : NSObject {
-    private var element : TFHppleElement?
-    public internal(set) var XPathQuery : String?
+open class HTMLParserElement : NSObject {
+    fileprivate var element : TFHppleElement?
+    open internal(set) var XPathQuery : String?
     
     required public init?(element: AnyObject, XPathQuery : String? = nil) {
         super.init()
@@ -87,39 +87,39 @@ public class HTMLParserElement : NSObject {
         }
     }
     
-    public var innerContent : String? {
+    open var innerContent : String? {
         return element?.raw as String?
     }
     
-    public var text : String? {
+    open var text : String? {
         return element?.text() as String?
     }
     
-    public var content : String? {
+    open var content : String? {
         return element?.content as String?
     }
     
-    public var tagName : String? {
+    open var tagName : String? {
         return element?.tagName as String?
     }
     
-    public func objectForKey(key: String) -> String? {
-        return element?.objectForKey(key.lowercaseString) as String?
+    open func objectForKey(_ key: String) -> String? {
+        return element?.object(forKey: key.lowercased()) as String?
     }
     
-    public func childrenWithTagName<T: HTMLElement>(tagName: String) -> [T]? {
-        return element?.childrenWithTagName(tagName).flatMap { T(element: $0) }
+    open func childrenWithTagName<T: HTMLElement>(_ tagName: String) -> [T]? {
+        return element?.children(withTagName: tagName).flatMap { T(element: $0 as AnyObject) }
     }
     
-    public func children<T: HTMLElement>() -> [T]? {
-        return element?.children.flatMap { T(element:$0) }
+    open func children<T: HTMLElement>() -> [T]? {
+        return element?.children.flatMap { T(element:$0 as AnyObject) }
     }
     
-    public func hasChildren() -> Bool {
+    open func hasChildren() -> Bool {
         return element?.hasChildren() ?? false
     }
     
-    override public var description : String {
+    override open var description : String {
         return element?.raw ?? ""
     }
 }
@@ -130,24 +130,24 @@ public class HTMLParserElement : NSObject {
 //========================================
 
 /// A JSON Parser class, which represents a JSON document.
-public class JSONParser : Parser {
+open class JSONParser : Parser {
     
-    private var json : JSON?
+    fileprivate var json : JSON?
     
-    required public init(data: NSData, url: NSURL? = nil) {
+    required public init(data: Data, url: URL? = nil) {
         super.init(data: data, url: url)
         let result : Result<JSON> = parseJSON(data)
         switch result {
-        case .Success(let json): self.json = json
-        case .Error: Logger.log("Error parsing JSON!")
+        case .success(let json): self.json = json
+        case .error: Logger.log("Error parsing JSON!")
         }
     }
     
-    public func content() -> JSON? {
+    open func content() -> JSON? {
         return json
     }
     
-    override public var description : String {
+    override open var description : String {
         return "\(json)"
     }
 }

@@ -24,7 +24,7 @@
 import Foundation
 
 /// HTMLPage class, which represents the DOM of a HTML page.
-public class HTMLPage : HTMLParser, Page {
+open class HTMLPage : HTMLParser, Page {
     
     //========================================
     // MARK: Initializer
@@ -38,7 +38,7 @@ public class HTMLPage : HTMLParser, Page {
     
     - returns: A HTML page.
     */
-    public static func pageWithData(data: NSData?, url: NSURL?) -> Page? {
+    open static func pageWithData(_ data: Data?, url: URL?) -> Page? {
         if let data = data {
             return HTMLPage(data: data, url: url)
         }
@@ -49,11 +49,11 @@ public class HTMLPage : HTMLParser, Page {
     // MARK: Find Elements
     //========================================
     
-    public func findElements<T: HTMLElement>(searchType: SearchType<T>) -> Result<[T]> {
+    open func findElements<T: HTMLElement>(_ searchType: SearchType<T>) -> Result<[T]> {
         let query = searchType.xPathQuery()
-        if let parsedObjects = searchWithXPathQuery(query) where parsedObjects.count > 0 {
-            return resultFromOptional(parsedObjects.flatMap { T(element: $0, XPathQuery: query) }, error: .NotFound)
+        if let parsedObjects = searchWithXPathQuery(query) , parsedObjects.count > 0 {
+            return resultFromOptional(parsedObjects.flatMap { T(element: $0, XPathQuery: query) }, error: .notFound)
         }
-        return Result.Error(.NotFound)
+        return Result.error(.notFound)
     }
 }

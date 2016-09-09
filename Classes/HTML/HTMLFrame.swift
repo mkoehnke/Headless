@@ -24,10 +24,10 @@
 import Foundation
 
 /// HTML iframe Class, which represents the <iframe> element in the DOM.
-public class HTMLFrame : HTMLRedirectable {
+open class HTMLFrame : HTMLRedirectable {
     
     /// Returns the value of the src attribute of the iframe.
-    public var source : String? {
+    open var source : String? {
         return objectForKey("src")
     }
     
@@ -46,7 +46,7 @@ public class HTMLFrame : HTMLRedirectable {
     // MARK: Overrides
     //========================================
     
-    internal override class func createXPathQuery(parameters: String) -> String {
+    internal override class func createXPathQuery(_ parameters: String) -> String {
         return "//iframe\(parameters)"
     }
 }

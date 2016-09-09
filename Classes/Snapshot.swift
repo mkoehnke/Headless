@@ -29,24 +29,22 @@ import Cocoa
 public typealias SnapshotImage = NSImage
 #endif
     
-public typealias SnapshotHandler = Snapshot -> Void
+public typealias SnapshotHandler = (Snapshot) -> Void
 
 /// WKZombie Snapshot Helper Class
-public class Snapshot {
-    public let page : NSURL?
-    public let file : NSURL
-    public lazy var image : SnapshotImage? = {
-        if let path = self.file.path {
-            #if os(iOS)
-                return UIImage(contentsOfFile: path)
-            #elseif os(OSX)
-                return NSImage(contentsOfFile: path)
-            #endif
-        }
-        return nil
+open class Snapshot {
+    open let page : URL?
+    open let file : URL
+    open lazy var image : SnapshotImage? = {
+        let path = self.file.path
+        #if os(iOS)
+            return UIImage(contentsOfFile: path)
+        #elseif os(OSX)
+            return NSImage(contentsOfFile: path)
+        #endif
     }()
     
-    internal init?(data: NSData, page: NSURL? = nil) {
+    internal init?(data: Data, page: URL? = nil) {
         do {
             self.file = try Snapshot.store(data)
             self.page = page
@@ -56,13 +54,13 @@ public class Snapshot {
         }
     }
     
-    private static func store(data: NSData) throws -> NSURL {
-        let identifier = NSProcessInfo.processInfo().globallyUniqueString
+    fileprivate static func store(_ data: Data) throws -> URL {
+        let identifier = ProcessInfo.processInfo.globallyUniqueString
         
         let fileName = String(format: "wkzombie-snapshot-%@", identifier)
-        let fileURL = NSURL(fileURLWithPath: NSTemporaryDirectory()).URLByAppendingPathComponent(fileName)
+        let fileURL = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(fileName)
         
-        try data.writeToURL(fileURL, options: .AtomicWrite)
+        try data.write(to: fileURL, options: .atomicWrite)
         
         return fileURL
     }
@@ -76,13 +74,11 @@ public class Snapshot {
      
      - returns: The URL with the new file location.
      */
-    public func moveTo(directory: NSURL) throws -> NSURL? {
-        let fileManager = NSFileManager.defaultManager()
-        if let fileName = file.lastPathComponent {
-            let destination = directory.URLByAppendingPathComponent(fileName)
-            try fileManager.moveItemAtURL(file, toURL: destination)
-            return destination
-        }
-        return nil
+    open func moveTo(_ directory: URL) throws -> URL? {
+        let fileManager = FileManager.default
+        let fileName = file.lastPathComponent
+        let destination = directory.appendingPathComponent(fileName)
+        try fileManager.moveItem(at: file, to: destination)
+        return destination
     }
 }

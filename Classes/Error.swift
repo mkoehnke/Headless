@@ -27,14 +27,12 @@ public protocol ErrorType { }
 
 public enum NoError: ErrorType { }
 
-extension NSError: ErrorType { }
-
 public enum ActionError: ErrorType {
-    case NetworkRequestFailure
-    case NotFound
-    case ParsingFailure
-    case TransformFailure
-    case SnapshotFailure
+    case networkRequestFailure
+    case notFound
+    case parsingFailure
+    case transformFailure
+    case snapshotFailure
     
     internal struct Static {
         static let DefaultStatusCodeSuccess : Int = 200
@@ -45,11 +43,11 @@ public enum ActionError: ErrorType {
 extension ActionError: CustomDebugStringConvertible {
     public var debugDescription: String {
         switch self {
-        case .NetworkRequestFailure: return "Network Request Failure"
-        case .NotFound: return "Not Found"
-        case .ParsingFailure: return "Parsing Failure"
-        case .TransformFailure: return "Transform Failure"
-        case .SnapshotFailure: return "Snapshot Failure"
+        case .networkRequestFailure: return "Network Request Failure"
+        case .notFound: return "Not Found"
+        case .parsingFailure: return "Parsing Failure"
+        case .transformFailure: return "Transform Failure"
+        case .snapshotFailure: return "Snapshot Failure"
         }
     }
 }

@@ -28,97 +28,97 @@ import WebKit
 // MARK: RenderOperation
 //========================================
 
-internal class RenderOperation : NSOperation {
+internal class RenderOperation : Operation {
     
-    typealias RequestBlock = (operation: RenderOperation) -> Void
+    typealias RequestBlock = (_ operation: RenderOperation) -> Void
 
-    private(set) weak var webView : WKWebView?
-    private var timeout : NSTimer?
-    private let timeoutInSeconds : NSTimeInterval
-    private var stopRunLoop : Bool = false
+    fileprivate(set) weak var webView : WKWebView?
+    fileprivate var timeout : Timer?
+    fileprivate let timeoutInSeconds : TimeInterval
+    fileprivate var stopRunLoop : Bool = false
     
     var loadMediaContent : Bool = true
     var requestBlock : RequestBlock?
-    var postAction: PostAction = .None
+    var postAction: PostAction = .none
     
-    internal private(set) var result : NSData?
-    internal private(set) var response : NSURLResponse?
-    internal private(set) var error : NSError?
+    internal fileprivate(set) var result : Data?
+    internal fileprivate(set) var response : URLResponse?
+    internal fileprivate(set) var error : Error?
     
-    private var _executing: Bool = false
-    override var executing: Bool {
+    fileprivate var _executing: Bool = false
+    override var isExecuting: Bool {
         get {
             return _executing
         }
         set {
             if _executing != newValue {
-                willChangeValueForKey("isExecuting")
+                willChangeValue(forKey: "isExecuting")
                 _executing = newValue
-                didChangeValueForKey("isExecuting")
+                didChangeValue(forKey: "isExecuting")
             }
         }
     }
     
-    private var _finished: Bool = false;
-    override var finished: Bool {
+    fileprivate var _finished: Bool = false;
+    override var isFinished: Bool {
         get {
             return _finished
         }
         set {
             if _finished != newValue {
-                willChangeValueForKey("isFinished")
+                willChangeValue(forKey: "isFinished")
                 _finished = newValue
-                didChangeValueForKey("isFinished")
+                didChangeValue(forKey: "isFinished")
             }
         }
     }
     
-    init(webView: WKWebView, timeoutInSeconds : NSTimeInterval = 30.0) {
+    init(webView: WKWebView, timeoutInSeconds : TimeInterval = 30.0) {
         self.timeoutInSeconds = timeoutInSeconds
         super.init()
         self.webView = webView
     }
     
     override func start() {
-        if self.cancelled {
+        if self.isCancelled {
             return
         } else {
             Logger.log("\(name ?? String())")
             Logger.log("[", lineBreak: false)
-            executing = true
+            isExecuting = true
             startTimeout()
             
             // Wait for WKWebView to finish loading before starting the operation.
-            wait { [unowned self] in self.webView?.loading == false ?? true }
+            wait { [unowned self] in self.webView?.isLoading == false }
             
             setupReferences()
-            requestBlock?(operation: self)
+            requestBlock?(self)
             
             // Loading
             wait { [unowned self] in self.stopRunLoop }
         }
     }
     
-    func wait(condition: () -> Bool) {
-        let updateInterval : NSTimeInterval = 0.1
-        var loopUntil = NSDate(timeIntervalSinceNow: updateInterval)
-        while condition() == false && NSRunLoop.currentRunLoop().runMode(NSDefaultRunLoopMode, beforeDate: loopUntil) {
-            loopUntil = NSDate(timeIntervalSinceNow: updateInterval)
+    func wait(_ condition: () -> Bool) {
+        let updateInterval : TimeInterval = 0.1
+        var loopUntil = Date(timeIntervalSinceNow: updateInterval)
+        while condition() == false && RunLoop.current.run(mode: RunLoopMode.defaultRunLoopMode, before: loopUntil) {
+            loopUntil = Date(timeIntervalSinceNow: updateInterval)
             Logger.log(".", lineBreak: false)
         }
     }
     
-    func completeRendering(webView: WKWebView?, result: NSData? = nil, error: NSError? = nil) {
+    func completeRendering(_ webView: WKWebView?, result: Data? = nil, error: Error? = nil) {
         stopTimeout()
         
-        if executing == true && finished == false {
+        if isExecuting == true && isFinished == false {
             self.result = result ?? self.result
             self.error = error ?? self.error
 
             cleanupReferences()
             
-            executing = false
-            finished = true
+            isExecuting = false
+            isFinished = true
             
             Logger.log("]\n")
         }
@@ -129,32 +129,32 @@ internal class RenderOperation : NSOperation {
         super.cancel()
         stopTimeout()
         cleanupReferences()
-        executing = false
-        finished = true
+        isExecuting = false
+        isFinished = true
     }
     
     // MARK: Helper Methods
     
-    private func startTimeout() {
+    fileprivate func startTimeout() {
         stopRunLoop = false
-        timeout = NSTimer(timeInterval: timeoutInSeconds, target: self, selector: #selector(RenderOperation.cancel), userInfo: nil, repeats: false)
-        NSRunLoop.currentRunLoop().addTimer(timeout!, forMode: NSDefaultRunLoopMode)
+        timeout = Timer(timeInterval: timeoutInSeconds, target: self, selector: #selector(RenderOperation.cancel), userInfo: nil, repeats: false)
+        RunLoop.current.add(timeout!, forMode: RunLoopMode.defaultRunLoopMode)
     }
     
-    private func stopTimeout() {
+    fileprivate func stopTimeout() {
         timeout?.invalidate()
         timeout = nil
         stopRunLoop = true
     }
     
-    private func setupReferences() {
-        webView?.configuration.userContentController.addScriptMessageHandler(self, name: "doneLoading")
+    fileprivate func setupReferences() {
+        webView?.configuration.userContentController.add(self, name: "doneLoading")
         webView?.navigationDelegate = self
     }
     
-    private func cleanupReferences() {
+    fileprivate func cleanupReferences() {
         webView?.navigationDelegate = nil
-        webView?.configuration.userContentController.removeScriptMessageHandlerForName("doneLoading")
+        webView?.configuration.userContentController.removeScriptMessageHandler(forName: "doneLoading")
         webView = nil
     }
 }
@@ -165,15 +165,15 @@ internal class RenderOperation : NSOperation {
 
 extension RenderOperation : WKScriptMessageHandler {
     
-    func userContentController(userContentController: WKUserContentController, didReceiveScriptMessage message: WKScriptMessage) {
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
         //None of the content loaded after this point is necessary (images, videos, etc.)
         if let webView = message.webView {
             if message.name == "doneLoading" && loadMediaContent == false {
-                if let url = webView.URL where response == nil {
-                    response = NSHTTPURLResponse(URL: url, statusCode: 200, HTTPVersion: nil, headerFields: nil)
+                if let url = webView.url , response == nil {
+                    response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)
                 }
                 webView.stopLoading()
-                self.webView(webView, didFinishNavigation: nil)
+                self.webView(webView, didFinish: nil)
             }
         }
     }
@@ -185,13 +185,13 @@ extension RenderOperation : WKScriptMessageHandler {
 
 extension RenderOperation : WKNavigationDelegate {
     
-    func webView(webView: WKWebView, decidePolicyForNavigationResponse navigationResponse: WKNavigationResponse, decisionHandler: (WKNavigationResponsePolicy) -> Void) {
+    func webView(_ webView: WKWebView, decidePolicyFor navigationResponse: WKNavigationResponse, decisionHandler: @escaping (WKNavigationResponsePolicy) -> Void) {
         response = navigationResponse.response
-        decisionHandler(.Allow)
+        decisionHandler(.allow)
     }
     
-    func webView(webView: WKWebView, didFailNavigation navigation: WKNavigation!, withError error: NSError) {
-        if let response = response as? NSHTTPURLResponse, _ = completionBlock {
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+        if let response = response as? HTTPURLResponse, let _ = completionBlock {
             let successRange = 200..<300
             if !successRange.contains(response.statusCode) {
                 self.error = error
@@ -200,10 +200,10 @@ extension RenderOperation : WKNavigationDelegate {
         }
     }
     
-    func webView(webView: WKWebView, didFinishNavigation navigation: WKNavigation!) {
+    func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         switch postAction {
-        case .Wait, .Validate: handlePostAction(postAction, webView: webView)
-        case .None: finishedLoading(webView)
+        case .wait, .validate: handlePostAction(postAction, webView: webView)
+        case .none: finishedLoading(webView)
         }
     }
     
@@ -215,17 +215,17 @@ extension RenderOperation : WKNavigationDelegate {
 
 extension RenderOperation {
         
-    func finishedLoading(webView: WKWebView) {
+    func finishedLoading(_ webView: WKWebView) {
         webView.evaluateJavaScript("\(Renderer.scrapingCommand);") { [weak self] result, error in
-            self?.result = result?.dataUsingEncoding(NSUTF8StringEncoding)
+            self?.result = (result as? String)?.data(using: String.Encoding.utf8)
             self?.completeRendering(webView)
         }
     }
     
-    func validate(condition: String, webView: WKWebView) {
-        if finished == false && cancelled == false {
+    func validate(_ condition: String, webView: WKWebView) {
+        if isFinished == false && isCancelled == false {
             webView.evaluateJavaScript(condition) { [weak self] result, error in
-                if let result = result as? Bool where result == true {
+                if let result = result as? Bool , result == true {
                     self?.finishedLoading(webView)
                 } else {
                     delay(0.5, completion: {
@@ -236,19 +236,19 @@ extension RenderOperation {
         }
     }
     
-    func waitAndFinish(time: NSTimeInterval, webView: WKWebView) {
+    func waitAndFinish(_ time: TimeInterval, webView: WKWebView) {
         delay(time) {
             self.finishedLoading(webView)
         }
     }
     
-    func handlePostAction(postAction: PostAction, webView: WKWebView) {
+    func handlePostAction(_ postAction: PostAction, webView: WKWebView) {
         switch postAction {
-        case .Validate(let script): validate(script, webView: webView)
-        case .Wait(let time): waitAndFinish(time, webView: webView)
+        case .validate(let script): validate(script, webView: webView)
+        case .wait(let time): waitAndFinish(time, webView: webView)
         default: Logger.log("Something went wrong!")
         }
-        self.postAction = .None
+        self.postAction = .none
     }
     
 }

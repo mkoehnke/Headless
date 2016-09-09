@@ -24,37 +24,39 @@
 import Foundation
 import WebKit
 
-public class WKZombie : NSObject {
+open class WKZombie : NSObject {
+    
+    private static var __once: () = {  Static.instance = WKZombie() }()
     
     /// A shared instance of `Manager`, used by top-level WKZombie methods,
     /// and suitable for multiple web sessions.
-    public class var sharedInstance: WKZombie {
-        dispatch_once(&Static.token) {  Static.instance = WKZombie() }
+    open class var sharedInstance: WKZombie {
+        _ = WKZombie.__once
         return Static.instance!
     }
     
     internal struct Static {
-        static var token : dispatch_once_t = 0
+        static var token : Int = 0
         static var instance : WKZombie?
     }
     
-    private var _renderer : Renderer!
-    private var _fetcher : ContentFetcher!
+    fileprivate var _renderer : Renderer!
+    fileprivate var _fetcher : ContentFetcher!
     
     /// Returns the name of this WKZombie session.
-    public private(set) var name : String!
+    open fileprivate(set) var name : String!
     
     /// If false, the loading progress will finish once the 'raw' HTML data
     /// has been transmitted. Media content such as videos or images won't
     /// be loaded.
-    public var loadMediaContent : Bool = true {
+    open var loadMediaContent : Bool = true {
         didSet {
             _renderer.loadMediaContent = loadMediaContent
         }
     }
     
     /// The custom user agent string or nil if no custom user agent string has been set.
-    public var userAgent : String? {
+    open var userAgent : String? {
         get {
             return self._renderer.userAgent
         }
@@ -65,7 +67,7 @@ public class WKZombie : NSObject {
     
     /// An operation is cancelled if the time it needs to complete exceeds the time 
     /// specified by this property. Default is 30 seconds.
-    public var timeoutInSeconds : NSTimeInterval {
+    open var timeoutInSeconds : TimeInterval {
         get {
             return self._renderer.timeoutInSeconds
         }
@@ -76,7 +78,7 @@ public class WKZombie : NSObject {
     
     #if os(iOS)
     /// Snapshot Handler
-    public var snapshotHandler : SnapshotHandler?
+    open var snapshotHandler : SnapshotHandler?
     #endif
     
     /**
@@ -97,12 +99,12 @@ public class WKZombie : NSObject {
     // MARK: Response Handling
     //========================================
     
-    private func _handleResponse(data: NSData?, response: NSURLResponse?, error: NSError?) -> Result<NSData> {
+    fileprivate func _handleResponse(_ data: Data?, response: URLResponse?, error: Error?) -> Result<Data> {
         var statusCode : Int = (error == nil) ? ActionError.Static.DefaultStatusCodeSuccess : ActionError.Static.DefaultStatusCodeError
-        if let response = response as? NSHTTPURLResponse {
+        if let response = response as? HTTPURLResponse {
             statusCode = response.statusCode
         }
-        let errorDomain : ActionError? = (error == nil) ? nil : .NetworkRequestFailure
+        let errorDomain : ActionError? = (error == nil) ? nil : .networkRequestFailure
         let responseResult: Result<Response> = Result(errorDomain, Response(data: data, statusCode: statusCode))
         return responseResult >>> parseResponse
     }
@@ -111,16 +113,16 @@ public class WKZombie : NSObject {
     // MARK: HTMLRedirectable Handling
     //========================================
     
-    private func redirect<T: Page, U: HTMLRedirectable>(then postAction: PostAction = .None) -> (redirectable : U) -> Action<T> {
+    fileprivate func redirect<T: Page, U: HTMLRedirectable>(then postAction: PostAction = .none) -> (_ redirectable : U) -> Action<T> {
         return { (redirectable: U) -> Action<T> in
             return Action() { [unowned self] completion in
                 if let script = redirectable.actionScript() {
                     self._renderer.executeScript(script, willLoadPage: true, postAction: postAction, completionHandler: { result, response, error in
-                        let data = self._handleResponse(result as? NSData, response: response, error: error)
-                        completion(data >>> decodeResult(response?.URL))
+                        let data = self._handleResponse(result as? Data, response: response, error: error)
+                        completion(data >>> decodeResult(response?.url))
                     })
                 } else {
-                    completion(Result.Error(.NetworkRequestFailure))
+                    completion(Result.error(.networkRequestFailure))
                 }
             }
         }
@@ -140,8 +142,8 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func open<T: Page>(url: NSURL) -> Action<T> {
-        return open(then: .None)(url: url)
+    public func open<T: Page>(_ url: URL) -> Action<T> {
+        return open(then: .none)(url)
     }
     
     /**
@@ -152,13 +154,13 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func open<T: Page>(then postAction: PostAction) -> (url: NSURL) -> Action<T> {
-        return { (url: NSURL) -> Action<T> in
+    public func open<T: Page>(then postAction: PostAction) -> (_ url: URL) -> Action<T> {
+        return { (url: URL) -> Action<T> in
             return Action() { [unowned self] completion in
-                let request = NSURLRequest(URL: url)
+                let request = URLRequest(url: url)
                 self._renderer.renderPageWithRequest(request, postAction: postAction, completionHandler: { data, response, error in
-                    let data = self._handleResponse(data as? NSData, response: response, error: error)
-                    completion(data >>> decodeResult(response?.URL))
+                    let data = self._handleResponse(data as? Data, response: response, error: error)
+                    completion(data >>> decodeResult(response?.url))
                 })
             }
         }
@@ -172,8 +174,8 @@ extension WKZombie {
     public func inspect<T: Page>() -> Action<T> {
         return Action() { [unowned self] completion in
             self._renderer.currentContent({ (result, response, error) in
-                let data = self._handleResponse(result as? NSData, response: response, error: error)
-                completion(data >>> decodeResult(response?.URL))
+                let data = self._handleResponse(result as? Data, response: response, error: error)
+                completion(data >>> decodeResult(response?.url))
             })
         }
     }
@@ -192,8 +194,8 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func submit<T: Page>(form: HTMLForm) -> Action<T> {
-        return submit(then: .None)(form: form)
+    public func submit<T: Page>(_ form: HTMLForm) -> Action<T> {
+        return submit(then: .none)(form)
     }
     
     /**
@@ -204,16 +206,16 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func submit<T: Page>(then postAction: PostAction) -> (form: HTMLForm) -> Action<T> {
+    public func submit<T: Page>(then postAction: PostAction) -> (_ form: HTMLForm) -> Action<T> {
         return { (form: HTMLForm) -> Action<T> in
             return Action() { [unowned self] completion in
                 if let script = form.actionScript() {
                     self._renderer.executeScript(script, willLoadPage: true, postAction: postAction, completionHandler: { result, response, error in
-                        let data = self._handleResponse(result as? NSData, response: response, error: error)
-                        completion(data >>> decodeResult(response?.URL))
+                        let data = self._handleResponse(result as? Data, response: response, error: error)
+                        completion(data >>> decodeResult(response?.url))
                     })
                 } else {
-                    completion(Result.Error(.NetworkRequestFailure))
+                    completion(Result.error(.networkRequestFailure))
                 }
             }
         }
@@ -233,8 +235,8 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func click<T: Page>(link : HTMLLink) -> Action<T> {
-        return click(then: .None)(link: link)
+    public func click<T: Page>(_ link : HTMLLink) -> Action<T> {
+        return click(then: .none)(link)
     }
     
     /**
@@ -245,9 +247,9 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func click<T: Page>(then postAction: PostAction) -> (link : HTMLLink) -> Action<T> {
+    public func click<T: Page>(then postAction: PostAction) -> (_ link : HTMLLink) -> Action<T> {
         return { [unowned self] (link: HTMLLink) -> Action<T> in
-            return self.redirect(then: postAction)(redirectable: link)
+            return self.redirect(then: postAction)(link)
         }
     }
     
@@ -258,8 +260,8 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func press<T: Page>(button : HTMLButton) -> Action<T> {
-        return press(then: .None)(button: button)
+    public func press<T: Page>(_ button : HTMLButton) -> Action<T> {
+        return press(then: .none)(button)
     }
     
     /**
@@ -270,9 +272,9 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func press<T: Page>(then postAction: PostAction) -> (button : HTMLButton) -> Action<T> {
+    public func press<T: Page>(then postAction: PostAction) -> (_ button : HTMLButton) -> Action<T> {
         return { [unowned self] (button: HTMLButton) -> Action<T> in
-            return self.redirect(then: postAction)(redirectable: button)
+            return self.redirect(then: postAction)(button)
         }
     }
 }
@@ -289,8 +291,8 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func swap<T: Page>(iframe : HTMLFrame) -> Action<T> {
-        return swap(then: .None)(iframe: iframe)
+    public func swap<T: Page>(_ iframe : HTMLFrame) -> Action<T> {
+        return swap(then: .none)(iframe)
     }
     
     /**
@@ -301,9 +303,9 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func swap<T: Page>(then postAction: PostAction) -> (iframe : HTMLFrame) -> Action<T> {
+    public func swap<T: Page>(then postAction: PostAction) -> (_ iframe : HTMLFrame) -> Action<T> {
         return { [unowned self] (iframe: HTMLFrame) -> Action<T> in
-            return self.redirect(then: postAction)(redirectable: iframe)
+            return self.redirect(then: postAction)(iframe)
         }
     }
 }
@@ -323,15 +325,15 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func setAttribute<T: HTMLElement>(key: String, value: String?) -> (element: T) -> Action<HTMLPage> {
+    public func setAttribute<T: HTMLElement>(_ key: String, value: String?) -> (_ element: T) -> Action<HTMLPage> {
         return { (element: T) -> Action<HTMLPage> in
             return Action() { [unowned self] completion in
                 if let script = element.createSetAttributeCommand(key, value: value) {
                     self._renderer.executeScript("\(script) \(Renderer.scrapingCommand.terminate())", completionHandler: { result, response, error in
-                        completion(decodeResult(nil)(data: result as? NSData))
+                        completion(decodeResult(nil)(result as? Data))
                     })
                 } else {
-                    completion(Result.Error(.NetworkRequestFailure))
+                    completion(Result.error(.networkRequestFailure))
                 }
             }
         }
@@ -353,7 +355,7 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func getAll<T: HTMLElement>(by searchType: SearchType<T>) -> (page: HTMLPage) -> Action<[T]> {
+    public func getAll<T: HTMLElement>(by searchType: SearchType<T>) -> (_ page: HTMLPage) -> Action<[T]> {
         return { (page: HTMLPage) -> Action<[T]> in
             let elements : Result<[T]> = page.findElements(searchType)
             return Action(result: elements)
@@ -369,7 +371,7 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func get<T: HTMLElement>(by searchType: SearchType<T>) -> (page: HTMLPage) -> Action<T> {
+    public func get<T: HTMLElement>(by searchType: SearchType<T>) -> (_ page: HTMLPage) -> Action<T> {
         return { (page: HTMLPage) -> Action<T> in
             let elements : Result<[T]> = page.findElements(searchType)
             return Action(result: elements.first())
@@ -393,12 +395,12 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func execute(script: JavaScript) -> Action<JavaScriptResult> {
+    public func execute(_ script: JavaScript) -> Action<JavaScriptResult> {
         return Action() { [unowned self] completion in
             self._renderer.executeScript(script, completionHandler: { result, response, error in
-                let data = self._handleResponse(result as? NSData, response: response, error: error)
+                let data = self._handleResponse(result as? Data, response: response, error: error)
                 let output = data >>> decodeString
-                Logger.log("Script Result".uppercaseString + "\n\(output)\n")
+                Logger.log("Script Result".uppercased() + "\n\(output)\n")
                 completion(output)
             })
         }
@@ -412,7 +414,7 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func execute<T: HTMLPage>(script: JavaScript) -> (page : T) -> Action<JavaScriptResult> {
+    public func execute<T: HTMLPage>(_ script: JavaScript) -> (_ page : T) -> Action<JavaScriptResult> {
         return { [unowned self] (page : T) -> Action<JavaScriptResult> in
             return self.execute(script)
         }
@@ -432,21 +434,21 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func fetch<T: HTMLFetchable>(fetchable: T) -> Action<T> {
+    public func fetch<T: HTMLFetchable>(_ fetchable: T) -> Action<T> {
         return Action() { [unowned self] completion in
             if let fetchURL = fetchable.fetchURL {
                 self._fetcher.fetch(fetchURL, completion: { (result, response, error) in
                     let data = self._handleResponse(result, response: response, error: error)
                     switch data {
-                    case .Success(let value): fetchable.fetchedData = value
-                    case .Error(let error):
-                        completion(Result.Error(error))
+                    case .success(let value): fetchable.fetchedData = value
+                    case .error(let error):
+                        completion(Result.error(error))
                         return
                     }
-                    completion(Result.Success(fetchable))
+                    completion(Result.success(fetchable))
                 })
             } else {
-                completion(Result.Error(.NotFound))
+                completion(Result.error(.notFound))
             }
         }
     }
@@ -466,9 +468,9 @@ extension WKZombie {
      
      - returns: The WKZombie Action.
      */
-    public func map<T, A>(f: T -> A) -> (object: T) -> Action<A> {
+    public func map<T, A>(_ f: @escaping (T) -> A) -> (_ object: T) -> Action<A> {
         return { (object: T) -> Action<A> in
-            return Action(result: resultFromOptional(f(object), error: .NotFound))
+            return Action(result: resultFromOptional(f(object), error: .notFound))
         }
     }
     
@@ -480,7 +482,7 @@ extension WKZombie {
      
      - returns: The transformed object.
      */
-    public func map<T, A>(f: T -> A) -> (object: T) -> A {
+    public func map<T, A>(_ f: @escaping (T) -> A) -> (_ object: T) -> A {
         return { (object: T) -> A in
             return f(object)
         }
@@ -502,7 +504,7 @@ extension WKZombie {
      
      - returns: The collected Sction results.
      */
-    public func collect<T>(f: T -> Action<T>, until: T -> Bool) -> (initial: T) -> Action<[T]> {
+    public func collect<T>(_ f: @escaping (T) -> Action<T>, until: @escaping (T) -> Bool) -> (_ initial: T) -> Action<[T]> {
         return { (initial: T) -> Action<[T]> in
             return Action.collect(initial, f: f, until: until)
         }
@@ -517,7 +519,7 @@ extension WKZombie {
      
      - returns: The collected Action results.
      */
-    public func batch<T, U>(f: T -> Action<U>) -> (elements: [T]) -> Action<[U]> {
+    public func batch<T, U>(_ f: @escaping (T) -> Action<U>) -> (_ elements: [T]) -> Action<[U]> {
         return { (elements: [T]) -> Action<[U]> in
             return Action.batch(elements, f: f)
         }
@@ -537,7 +539,7 @@ extension WKZombie {
      
      - returns: A JSON object.
      */
-    public func parse<T: JSON>(data: NSData) -> Action<T> {
+    public func parse<T: JSON>(_ data: Data) -> Action<T> {
         return Action(result: parseJSON(data))
     }
     
@@ -550,7 +552,7 @@ extension WKZombie {
      
      - returns: A JSONDecodable object.
      */
-    public func decode<T : JSONDecodable>(element: JSONParsable) -> Action<T> {
+    public func decode<T : JSONDecodable>(_ element: JSONParsable) -> Action<T> {
         return Action(result: decodeJSON(element.content()))
     }
     
@@ -563,7 +565,7 @@ extension WKZombie {
      
      - returns: A JSONDecodable array.
      */
-    public func decode<T : JSONDecodable>(array: JSONParsable) -> Action<[T]> {
+    public func decode<T : JSONDecodable>(_ array: JSONParsable) -> Action<[T]> {
         return Action(result: decodeJSON(array.content()))
     }
     
@@ -586,14 +588,14 @@ extension WKZombie {
      
      - returns: A snapshot class.
      */
-    public func snap<T>(element: T) -> Action<T> {
+    public func snap<T>(_ element: T) -> Action<T> {
         return Action<T>(operation: { [unowned self] completion in
             delay(DefaultSnapshotDelay, completion: {
-                if let snapshotHandler = self.snapshotHandler, snapshot = self._renderer.snapshot() {
+                if let snapshotHandler = self.snapshotHandler, let snapshot = self._renderer.snapshot() {
                     snapshotHandler(snapshot)
-                    completion(Result.Success(element))
+                    completion(Result.success(element))
                 } else {
-                    completion(Result.Error(.SnapshotFailure))
+                    completion(Result.error(.snapshotFailure))
                 }
             })
         })
@@ -612,7 +614,7 @@ extension WKZombie {
      */
     public func dump() {
         _renderer.currentContent { (result, response, error) in
-            if let output = (result as? NSData)?.toString() {
+            if let output = (result as? Data)?.toString() {
                 Logger.log(output)
             } else {
                 Logger.log("No Output available.")

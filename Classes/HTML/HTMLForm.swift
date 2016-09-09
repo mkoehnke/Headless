@@ -24,10 +24,10 @@
 import Foundation
 
 /// HTML Form class, which represents the <form> element in the DOM.
-public class HTMLForm : HTMLElement {
+open class HTMLForm : HTMLElement {
 
     /// All inputs fields (keys and values) of this form.
-    public private(set) var inputElements = [String : String]()
+    open fileprivate(set) var inputElements = [String : String]()
     
     required public init?(element: AnyObject, XPathQuery: String? = nil) {
         super.init(element: element, XPathQuery: XPathQuery)
@@ -37,17 +37,17 @@ public class HTMLForm : HTMLElement {
     }
     
     /// Returns the value for the name attribute.
-    public var name : String? {
+    open var name : String? {
         return objectForKey("name")
     }
     
     /// Returns the value for the id attribute.
-    public var id : String? {
+    open var id : String? {
         return objectForKey("id")
     }
     
     /// Returns the value for the action attribute.
-    public var action : String? {
+    open var action : String? {
         return objectForKey("action")
     }
     
@@ -58,7 +58,7 @@ public class HTMLForm : HTMLElement {
      
      - returns: The Input field attribute value.
      */
-    public subscript(key: String) -> String? {
+    open subscript(key: String) -> String? {
         return inputElements[key]
     }
     
@@ -79,7 +79,7 @@ public class HTMLForm : HTMLElement {
     // MARK: Overrides
     //========================================
     
-    internal override class func createXPathQuery(parameters: String) -> String {
+    internal override class func createXPathQuery(_ parameters: String) -> String {
         return "//form\(parameters)"
     }
     
@@ -87,13 +87,13 @@ public class HTMLForm : HTMLElement {
     // MARK: Private Methods
     //========================================
     
-    private func retrieveAllInputs(element: HTMLElement) {
-        if let tagName = element.tagName as String? where tagName == "input" {
+    fileprivate func retrieveAllInputs(_ element: HTMLElement) {
+        if let tagName = element.tagName as String? , tagName == "input" {
             if let name = element.objectForKey("name") {
                 inputElements[name] = element.objectForKey("value")
             }
         }
-        if let children = element.children() as [HTMLElement]? where children.count > 0 {
+        if let children = element.children() as [HTMLElement]? , children.count > 0 {
             for child in children {
                 retrieveAllInputs(child)
             }

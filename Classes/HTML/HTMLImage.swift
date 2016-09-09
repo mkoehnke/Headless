@@ -24,7 +24,7 @@
 import Foundation
 
 /// HTML Image class, which represents the <img> element in the DOM.
-public class HTMLImage : HTMLElement, HTMLFetchable {
+open class HTMLImage : HTMLElement, HTMLFetchable {
     
     //========================================
     // MARK: Initializer
@@ -35,7 +35,7 @@ public class HTMLImage : HTMLElement, HTMLFetchable {
     }
     
     /// Returns the value of the src attribute of the image.
-    public var source : String? {
+    open var source : String? {
         return objectForKey("src")
     }
 
@@ -43,9 +43,9 @@ public class HTMLImage : HTMLElement, HTMLFetchable {
     // MARK: HTMLFetchable Protocol
     //========================================
     
-    public var fetchURL : NSURL? {
+    open var fetchURL : URL? {
         if let source = source {
-            return NSURL(string: source)
+            return URL(string: source)
         }
         return nil
     }
@@ -54,7 +54,7 @@ public class HTMLImage : HTMLElement, HTMLFetchable {
     // MARK: Overrides
     //========================================
     
-    internal override class func createXPathQuery(parameters: String) -> String {
+    internal override class func createXPathQuery(_ parameters: String) -> String {
         return "//img\(parameters)"
     }
 }

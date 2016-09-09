@@ -34,7 +34,7 @@ public protocol JSONDecodable {
      
      - returns: The model object.
      */
-    static func decode(json: JSONElement) -> Self?
+    static func decode(_ json: JSONElement) -> Self?
 }
 
 /**
@@ -51,7 +51,7 @@ public protocol JSONParsable {
 
 
 /// JSONPage class, which represents the entire JSON document.
-public class JSONPage : JSONParser, Page, JSONParsable {
+open class JSONPage : JSONParser, Page, JSONParsable {
     
     /**
      Returns a JSON page instance for the specified JSON data.
@@ -61,7 +61,7 @@ public class JSONPage : JSONParser, Page, JSONParsable {
      
      - returns: A JSON page.
      */
-    public static func pageWithData(data: NSData?, url: NSURL?) -> Page? {
+    open static func pageWithData(_ data: Data?, url: URL?) -> Page? {
         if let data = data {
             return JSONPage(data: data, url: url)
         }

@@ -35,7 +35,7 @@ public protocol Page {
      
      - returns: A HTML or JSON page.
      */
-    static func pageWithData(data: NSData?, url: NSURL?) -> Page?
+    static func pageWithData(_ data: Data?, url: URL?) -> Page?
 }
 
 

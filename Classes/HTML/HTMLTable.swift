@@ -24,10 +24,10 @@
 import Foundation
 
 /// HTML Table class, which represents the <table> element in the DOM.
-public class HTMLTable : HTMLElement {
+open class HTMLTable : HTMLElement {
     
     /// Returns all row elements within this table
-    public var rows : [HTMLTableRow]? {
+    open var rows : [HTMLTableRow]? {
         let rows : [HTMLTableRow]? = children()
         return (rows?.first?.tagName == "tbody") ? rows?.first?.children() : rows
     }
@@ -36,17 +36,17 @@ public class HTMLTable : HTMLElement {
     // MARK: Overrides
     //========================================
 
-    internal override class func createXPathQuery(parameters: String) -> String {
+    internal override class func createXPathQuery(_ parameters: String) -> String {
         return "//table\(parameters)"
     }
 }
 
 
 /// HTML Table Row Class, which represents the <tr> element in the DOM.
-public class HTMLTableRow : HTMLElement {
+open class HTMLTableRow : HTMLElement {
     
     /// Returns all columns within this row.
-    public var columns : [HTMLTableColumn]? {
+    open var columns : [HTMLTableColumn]? {
         return children()
     }
     
@@ -54,19 +54,19 @@ public class HTMLTableRow : HTMLElement {
     // MARK: Overrides
     //========================================
     
-    internal override class func createXPathQuery(parameters: String) -> String {
+    internal override class func createXPathQuery(_ parameters: String) -> String {
         return "//tr\(parameters)"
     }
 }
 
 /// HTML Table Column class, which represents the <td> element in the DOM.
-public class HTMLTableColumn : HTMLElement {
+open class HTMLTableColumn : HTMLElement {
     
     //========================================
     // MARK: Overrides
     //========================================
     
-    internal override class func createXPathQuery(parameters: String) -> String {
+    internal override class func createXPathQuery(_ parameters: String) -> String {
         return "//td\(parameters)"
     }
 }

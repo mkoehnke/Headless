@@ -23,16 +23,18 @@
 
 import Foundation
 
-typealias FetchCompletion = (result : NSData?, response: NSURLResponse?, error: NSError?) -> Void
+typealias FetchCompletion = (_ result : Data?, _ response: URLResponse?, _ error: Error?) -> Void
 
 internal class ContentFetcher {
 
-    private let defaultSession = NSURLSession(configuration: NSURLSessionConfiguration.defaultSessionConfiguration())
+    fileprivate let defaultSession = URLSession(configuration: URLSessionConfiguration.default)
     
-    func fetch(url: NSURL, completion: FetchCompletion) -> NSURLSessionTask? {
-        let request = NSURLRequest(URL: url)
-        let task = defaultSession.dataTaskWithRequest(request, completionHandler: { (data, urlResponse, error) in
-            completion(result: data, response: urlResponse, error: error)
+    @discardableResult
+    func fetch(_ url: URL, completion: @escaping FetchCompletion) -> URLSessionTask? {
+        let request = URLRequest(url: url)
+        
+        let task = defaultSession.dataTask(with: request, completionHandler: { (data, urlResponse, error) -> Void in
+            completion(data, urlResponse, error)
         })
         task.resume()
         return task

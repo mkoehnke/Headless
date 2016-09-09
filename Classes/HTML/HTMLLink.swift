@@ -24,19 +24,19 @@
 import Foundation
 
 /// HTML Link class, which represents the <a> element in the DOM.
-public class HTMLLink : HTMLRedirectable, HTMLFetchable {
+open class HTMLLink : HTMLRedirectable, HTMLFetchable {
     
     /// Returns the value of the href attribute of the link.
-    public var href : String? {
+    open var href : String? {
         return text
     }
     
     /// Returns the link text.
-    public var linkText : String? {
+    open var linkText : String? {
         return content
     }
     
-    override public var description : String {
+    override open var description : String {
         return href ?? ""
     }
     
@@ -57,9 +57,9 @@ public class HTMLLink : HTMLRedirectable, HTMLFetchable {
     // MARK: HTMLFetchable Protocol
     //========================================
     
-    public var fetchURL : NSURL? {
+    open var fetchURL : URL? {
         if let href = objectForKey("href") {
-            return NSURL(string: href)
+            return URL(string: href)
         }
         return nil
     }
@@ -68,7 +68,7 @@ public class HTMLLink : HTMLRedirectable, HTMLFetchable {
     // MARK: Overrides
     //========================================
     
-    internal override class func createXPathQuery(parameters: String) -> String {
+    internal override class func createXPathQuery(_ parameters: String) -> String {
         return "//a\(parameters)/@href"
     }
 }

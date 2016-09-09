@@ -24,11 +24,11 @@
 import Foundation
 
 /// WKZombie Console Logger
-public class Logger : NSObject {
+open class Logger : NSObject {
     
-    public static var enabled : Bool = true
+    open static var enabled : Bool = true
     
-    public class func log(message: String, lineBreak: Bool = true) {
+    open class func log(_ message: String, lineBreak: Bool = true) {
         if enabled {
             if lineBreak {
                 print("\(message)")

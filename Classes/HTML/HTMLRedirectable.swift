@@ -9,7 +9,7 @@
 import Foundation
 
 /// Base class for redirectable HTML elements (e.g. HTMLLink, HTMLButton).
-public class HTMLRedirectable : HTMLElement {
+open class HTMLRedirectable : HTMLElement {
 
     //========================================
     // MARK: Initializer

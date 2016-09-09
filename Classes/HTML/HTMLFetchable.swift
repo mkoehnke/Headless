@@ -29,7 +29,7 @@ import ObjectiveC
 //==========================================
 
 public protocol HTMLFetchable : NSObjectProtocol {
-    var fetchURL : NSURL? { get }
+    var fetchURL : URL? { get }
     func fetchedContent<T: HTMLFetchableContent>() -> T?
 }
 
@@ -40,9 +40,9 @@ private var WKZFetchedDataKey: UInt8 = 0
 //==========================================
 
 extension HTMLFetchable {
-    internal var fetchedData: NSData? {
+    internal var fetchedData: Data? {
         get {
-            return objc_getAssociatedObject(self, &WKZFetchedDataKey) as? NSData
+            return objc_getAssociatedObject(self, &WKZFetchedDataKey) as? Data
         }
         set(newValue) {
             objc_setAssociatedObject(self, &WKZFetchedDataKey, newValue, objc_AssociationPolicy.OBJC_ASSOCIATION_RETAIN)
@@ -52,8 +52,8 @@ extension HTMLFetchable {
     public func fetchedContent<T : HTMLFetchableContent>() -> T? {
         if let fetchedData = fetchedData {
             switch T.instanceFromData(fetchedData) {
-            case .Success(let value): return value as? T
-            case .Error: return nil
+            case .success(let value): return value as? T
+            case .error: return nil
             }
         }
         return nil
@@ -67,7 +67,7 @@ extension HTMLFetchable {
 
 public protocol HTMLFetchableContent {
     associatedtype ContentType
-    static func instanceFromData(data: NSData) -> Result<ContentType>
+    static func instanceFromData(_ data: Data) -> Result<ContentType>
 }
 
 //==========================================
@@ -78,11 +78,11 @@ public protocol HTMLFetchableContent {
     import UIKit
     extension UIImage : HTMLFetchableContent {
         public typealias ContentType = UIImage
-        public static func instanceFromData(data: NSData) -> Result<ContentType> {
+        public static func instanceFromData(_ data: Data) -> Result<ContentType> {
             if let image = UIImage(data: data) {
-                return Result.Success(image)
+                return Result.success(image)
             }
-            return Result.Error(.TransformFailure)
+            return Result.error(.transformFailure)
         }
     }
 #elseif os(OSX)
@@ -98,9 +98,9 @@ public protocol HTMLFetchableContent {
     }
 #endif
 
-extension NSData : HTMLFetchableContent {
-    public typealias ContentType = NSData
-    public static func instanceFromData(data: NSData) -> Result<ContentType> {
-        return Result.Success(data)
+extension Data : HTMLFetchableContent {
+    public typealias ContentType = Data
+    public static func instanceFromData(_ data: Data) -> Result<ContentType> {
+        return Result.success(data)
     }
 }

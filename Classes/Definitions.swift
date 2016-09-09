@@ -28,27 +28,27 @@ public enum SearchType<T: HTMLElement> {
     /**
      * Returns an element that matches the specified id.
      */
-    case Id(String)
+    case id(String)
     /**
      * Returns all elements matching the specified value for their name attribute.
      */
-    case Name(String)
+    case name(String)
     /**
      * Returns all elements with inner content, that contain the specified text.
      */
-    case Text(String)
+    case text(String)
     /**
      * Returns all elements that match the specified class name.
      */
-    case Class(String)
+    case `class`(String)
     /**
      Returns all elements that match the specified attribute name/value combination.
      */
-    case Attribute(String, String)
+    case attribute(String, String)
     /**
      Returns all elements with an attribute containing the specified value.
      */
-    case Contains(String, String)
+    case contains(String, String)
     /**
      Returns all elements that match the specified XPath query.
      */
@@ -56,12 +56,12 @@ public enum SearchType<T: HTMLElement> {
     
     func xPathQuery() -> String {
         switch self {
-        case .Text(let value): return T.createXPathQuery("[contains(text(),'\(value)')]")
-        case .Id(let id): return T.createXPathQuery("[@id='\(id)']")
-        case .Name(let name): return T.createXPathQuery("[@name='\(name)']")
-        case .Attribute(let key, let value): return T.createXPathQuery("[@\(key)='\(value)']")
-        case .Class(let className): return T.createXPathQuery("[@class='\(className)']")
-        case .Contains(let key, let value): return T.createXPathQuery("[contains(@\(key), '\(value)')]")
+        case .text(let value): return T.createXPathQuery("[contains(text(),'\(value)')]")
+        case .id(let id): return T.createXPathQuery("[@id='\(id)']")
+        case .name(let name): return T.createXPathQuery("[@name='\(name)']")
+        case .attribute(let key, let value): return T.createXPathQuery("[@\(key)='\(value)']")
+        case .class(let className): return T.createXPathQuery("[@class='\(className)']")
+        case .contains(let key, let value): return T.createXPathQuery("[contains(@\(key), '\(value)')]")
         case .XPathQuery(let query): return query
         }
     }
@@ -72,23 +72,23 @@ public enum SearchType<T: HTMLElement> {
 //========================================
 
 public enum Result<T> {
-    case Success(T)
-    case Error(ActionError)
+    case success(T)
+    case error(ActionError)
     
     init(_ error: ActionError?, _ value: T) {
         if let err = error {
-            self = .Error(err)
+            self = .error(err)
         } else {
-            self = .Success(value)
+            self = .success(value)
         }
     }
 }
 
-public extension Result where T:CollectionType {
+public extension Result where T:Collection {
     public func first<A>() -> Result<A> {
         switch self {
-        case .Success(let result): return resultFromOptional(result.first as? A, error: .NotFound)
-        case .Error(let error): return resultFromOptional(nil, error: error)
+        case .success(let result): return resultFromOptional(result.first as? A, error: .notFound)
+        case .error(let error): return resultFromOptional(nil, error: error)
         }
     }
 }
@@ -96,10 +96,10 @@ public extension Result where T:CollectionType {
 extension Result: CustomDebugStringConvertible {
     public var debugDescription: String {
         switch self {
-        case .Success(let value):
-            return "Success: \(String(value))"
-        case .Error(let error):
-            return "Error: \(String(error))"
+        case .success(let value):
+            return "Success: \(String(describing: value))"
+        case .error(let error):
+            return "Error: \(String(describing: error))"
         }
     }
 }
@@ -109,27 +109,27 @@ extension Result: CustomDebugStringConvertible {
 //========================================
 
 internal struct Response {
-    var data: NSData?
+    var data: Data?
     var statusCode: Int = ActionError.Static.DefaultStatusCodeError
     
-    init(data: NSData?, urlResponse: NSURLResponse) {
+    init(data: Data?, urlResponse: URLResponse) {
         self.data = data
-        if let httpResponse = urlResponse as? NSHTTPURLResponse {
+        if let httpResponse = urlResponse as? HTTPURLResponse {
             self.statusCode = httpResponse.statusCode
         }
     }
     
-    init(data: NSData?, statusCode: Int) {
+    init(data: Data?, statusCode: Int) {
         self.data = data
         self.statusCode = statusCode
     }
 }
 
-infix operator >>> { associativity left precedence 170 }
-internal func >>><A, B>(a: Result<A>, f: A -> Result<B>) -> Result<B> {
+infix operator >>>: AdditionPrecedence
+internal func >>><A, B>(a: Result<A>, f: (A) -> Result<B>) -> Result<B> {
     switch a {
-    case let .Success(x):   return f(x)
-    case let .Error(error): return .Error(error)
+    case let .success(x):   return f(x)
+    case let .error(error): return .error(error)
     }
 }
 
@@ -142,7 +142,7 @@ internal func >>><A, B>(a: Result<A>, f: A -> Result<B>) -> Result<B> {
  
  - returns: An Action.
  */
-public func >>><T, U>(a: Action<T>, f: T -> Action<U>) -> Action<U> {
+public func >>><T, U>(a: Action<T>, f: @escaping (T) -> Action<U>) -> Action<U> {
     return a.andThen(f)
 }
 
@@ -156,7 +156,7 @@ public func >>><T, U>(a: Action<T>, f: T -> Action<U>) -> Action<U> {
  - returns: An Action.
  */
 public func >>><T, U>(a: Action<T>, b: Action<U>) -> Action<U> {
-    let f : (T -> Action<U>) = { _ in b }
+    let f : ((T) -> Action<U>) = { _ in b }
     return a.andThen(f)
 }
 
@@ -179,7 +179,7 @@ public func >>><T, U: Page>(a: Action<T>, f: () -> Action<U>) -> Action<U> {
  *Note:* This a workaround to remove the brackets of functions without any parameters (e.g. **inspect()**)
  to provide a consistent API.
  */
-public func >>><T:Page, U>(a: () -> Action<T>, f: T -> Action<U>) -> Action<U> {
+public func >>><T:Page, U>(a: () -> Action<T>, f: @escaping (T) -> Action<U>) -> Action<U> {
     return a() >>> f
 }
 
@@ -190,11 +190,11 @@ public func >>><T:Page, U>(a: () -> Action<T>, f: T -> Action<U>) -> Action<U> {
  - parameter a:          An Action.
  - parameter completion: A Completion Block.
  */
-public func ===<T>(a: Action<T>, completion: T? -> Void) {
+public func ===<T>(a: Action<T>, completion: @escaping (T?) -> Void) {
     return a.start { result in
         switch result {
-        case .Success(let value): completion(value)
-        case .Error: completion(nil)
+        case .success(let value): completion(value)
+        case .error: completion(nil)
         }
     }
 }
@@ -206,36 +206,36 @@ public func ===<T>(a: Action<T>, completion: T? -> Void) {
  - parameter a:          An Action.
  - parameter completion: An output function/closure.
  */
-public func ===<T>(a: Action<T>, completion: Result<T> -> Void) {
+public func ===<T>(a: Action<T>, completion: @escaping (Result<T>) -> Void) {
     return a.start { result in
         completion(result)
     }
 }
 
-internal func parseResponse(response: Response) -> Result<NSData> {
+internal func parseResponse(_ response: Response) -> Result<Data> {
     let successRange = 200..<300
     if !successRange.contains(response.statusCode) {
-        return .Error(.NetworkRequestFailure)
+        return .error(.networkRequestFailure)
     }
-    return Result(nil, response.data ?? NSData())
+    return Result(nil, response.data ?? Data())
 }
 
-internal func resultFromOptional<A>(optional: A?, error: ActionError) -> Result<A> {
+internal func resultFromOptional<A>(_ optional: A?, error: ActionError) -> Result<A> {
     if let a = optional {
-        return .Success(a)
+        return .success(a)
     } else {
-        return .Error(error)
+        return .error(error)
     }
 }
 
-internal func decodeResult<T: Page>(url: NSURL? = nil) -> (data: NSData?) -> Result<T> {
-    return { (data: NSData?) -> Result<T> in
-        return resultFromOptional(T.pageWithData(data, url: url) as? T, error: .NetworkRequestFailure)
+internal func decodeResult<T: Page>(_ url: URL? = nil) -> (_ data: Data?) -> Result<T> {
+    return { (data: Data?) -> Result<T> in
+        return resultFromOptional(T.pageWithData(data, url: url) as? T, error: .networkRequestFailure)
     }
 }
 
-internal func decodeString(data: NSData?) -> Result<String> {
-    return resultFromOptional(data?.toString(), error: .TransformFailure)
+internal func decodeString(_ data: Data?) -> Result<String> {
+    return resultFromOptional(data?.toString(), error: .transformFailure)
 }
 
 //========================================
@@ -246,34 +246,34 @@ internal func decodeString(data: NSData?) -> Result<String> {
 
 public struct Action<T> {
     public typealias ResultType = Result<T>
-    public typealias Completion = ResultType -> ()
-    public typealias AsyncOperation = Completion -> ()
+    public typealias Completion = (ResultType) -> ()
+    public typealias AsyncOperation = (@escaping Completion) -> ()
     
-    private let operation: AsyncOperation
+    fileprivate let operation: AsyncOperation
     
     public init(result: ResultType) {
         self.init(operation: { completion in
-            dispatch_async(dispatch_get_main_queue(), {
+            DispatchQueue.main.async(execute: {
                 completion(result)
             })
         })
     }
     
     public init(value: T) {
-        self.init(result: .Success(value))
+        self.init(result: .success(value))
     }
     
     public init(error: ActionError) {
-        self.init(result: .Error(error))
+        self.init(result: .error(error))
     }
     
-    public init(operation: AsyncOperation) {
+    public init(operation: @escaping AsyncOperation) {
         self.operation = operation
     }
     
-    public func start(completion: Completion) {
+    public func start(_ completion: @escaping Completion) {
         self.operation() { result in
-            dispatch_async(dispatch_get_main_queue(), {
+            DispatchQueue.main.async(execute: {
                 completion(result)
             })
         }
@@ -281,45 +281,45 @@ public struct Action<T> {
 }
 
 public extension Action {
-    public func map<U>(f: T -> U) -> Action<U> {
+    public func map<U>(_ f: @escaping (T) -> U) -> Action<U> {
         return Action<U>(operation: { completion in
             self.start { result in
-                dispatch_async(dispatch_get_main_queue(), {
+                DispatchQueue.main.async(execute: {
                     switch result {
-                    case .Success(let value): completion(Result.Success(f(value)))
-                    case .Error(let error): completion(Result.Error(error))
+                    case .success(let value): completion(Result.success(f(value)))
+                    case .error(let error): completion(Result.error(error))
                     }
                 })
             }
         })
     }
     
-    public func flatMap<U>(f: T -> U?) -> Action<U> {
+    public func flatMap<U>(_ f: @escaping (T) -> U?) -> Action<U> {
         return Action<U>(operation: { completion in
             self.start { result in
-                dispatch_async(dispatch_get_main_queue(), {
+                DispatchQueue.main.async(execute: {
                     switch result {
-                    case .Success(let value):
+                    case .success(let value):
                         if let result = f(value) {
-                            completion(Result.Success(result))
+                            completion(Result.success(result))
                         } else {
-                            completion(Result.Error(.TransformFailure))
+                            completion(Result.error(.transformFailure))
                         }
-                    case .Error(let error): completion(Result.Error(error))
+                    case .error(let error): completion(Result.error(error))
                     }
                 })
             }
         })
     }
     
-    public func andThen<U>(f: T -> Action<U>) -> Action<U> {
+    public func andThen<U>(_ f: @escaping (T) -> Action<U>) -> Action<U> {
         return Action<U>(operation: { completion in
             self.start { firstFutureResult in
                 switch firstFutureResult {
-                case .Success(let value): f(value).start(completion)
-                case .Error(let error):
-                    dispatch_async(dispatch_get_main_queue(), {
-                        completion(Result.Error(error))
+                case .success(let value): f(value).start(completion)
+                case .error(let error):
+                    DispatchQueue.main.async(execute: {
+                        completion(Result.error(error))
                     })
                 }
             }
@@ -344,24 +344,24 @@ public extension Action {
      
      - returns: The collected Sction results.
      */
-    internal static func collect(initial: T, f: T -> Action<T>, until: T -> Bool) -> Action<[T]> {
+    internal static func collect(_ initial: T, f: @escaping (T) -> Action<T>, until: @escaping (T) -> Bool) -> Action<[T]> {
         var values = [T]()
-        func loop(future: Action<T>) -> Action<[T]> {
+        func loop(_ future: Action<T>) -> Action<[T]> {
             return Action<[T]>(operation: { completion in
                 future.start { result in
                     switch result {
-                    case .Success(let newValue):
+                    case .success(let newValue):
                         values.append(newValue)
                         if until(newValue) == true {
                             loop(f(newValue)).start(completion)
                         } else {
-                            dispatch_async(dispatch_get_main_queue(), {
-                                completion(Result.Success(values))
+                            DispatchQueue.main.async(execute: {
+                                completion(Result.success(values))
                             })
                         }
-                    case .Error(let error):
-                        dispatch_async(dispatch_get_main_queue(), {
-                            completion(Result.Error(error))
+                    case .error(let error):
+                        DispatchQueue.main.async(execute: {
+                            completion(Result.error(error))
                         })
                     }
                 }
@@ -379,26 +379,26 @@ public extension Action {
      
      - returns: The collected Action results.
      */
-    internal static func batch<U>(elements: [T], f: T -> Action<U>) -> Action<[U]> {
+    internal static func batch<U>(_ elements: [T], f: @escaping (T) -> Action<U>) -> Action<[U]> {
         return Action<[U]>(operation: { completion in
-            let group = dispatch_group_create()
+            let group = DispatchGroup()
             var results = [U]()
             for element in elements {
-                dispatch_group_enter(group)
+                group.enter()
                 f(element).start({ result in
                     switch result {
-                    case .Success(let value):
+                    case .success(let value):
                         results.append(value)
-                        dispatch_group_leave(group)
-                    case .Error(let error):
-                        dispatch_async(dispatch_get_main_queue(), {
-                            completion(Result.Error(error))
+                        group.leave()
+                    case .error(let error):
+                        DispatchQueue.main.async(execute: {
+                            completion(Result.error(error))
                         })
                     }
                 })
             }
-            dispatch_group_notify(group, dispatch_get_main_queue()) {
-                completion(Result.Success(results))
+            group.notify(queue: DispatchQueue.main) {
+                completion(Result.success(results))
             }
         })
     }
@@ -420,16 +420,16 @@ public enum PostAction {
      
      - returns: Time in Seconds.
      */
-    case Wait(NSTimeInterval)
+    case wait(TimeInterval)
     /**
      The action will complete if the specified JavaScript expression/script returns 'true'
      or a timeout occurs.
      
      - returns: Validation Script.
      */
-    case Validate(String)
+    case validate(String)
     /// No Post Action will be performed.
-    case None
+    case none
 }
 
 
@@ -439,45 +439,45 @@ public enum PostAction {
 // https://robots.thoughtbot.com/efficient-json-in-swift-with-functional-concepts-and-generics
 //========================================
 
-public typealias JSON = AnyObject
-public typealias JSONElement = [String : AnyObject]
+public typealias JSON = Any
+public typealias JSONElement = [String : Any]
 
-internal func parseJSON<U: JSON>(data: NSData) -> Result<U> {
+internal func parseJSON<U: JSON>(_ data: Data) -> Result<U> {
     var jsonOptional: U?
-    var __error = ActionError.ParsingFailure
+    var __error = ActionError.parsingFailure
     
     do {
-        if let data = htmlToData(NSString(data: data, encoding: NSUTF8StringEncoding)) {
-            jsonOptional = try NSJSONSerialization.JSONObjectWithData(data, options: NSJSONReadingOptions(rawValue: 0)) as? U
+        if let data = htmlToData(NSString(data: data, encoding: String.Encoding.utf8.rawValue)) {
+            jsonOptional = try JSONSerialization.jsonObject(with: data, options: JSONSerialization.ReadingOptions(rawValue: 0)) as? U
         }
-    } catch _ as NSError {
-        __error = .ParsingFailure
+    } catch _ {
+        __error = .parsingFailure
         jsonOptional = nil
     }
     
     return resultFromOptional(jsonOptional, error: __error)
 }
 
-internal func decodeJSON<U: JSONDecodable>(json: JSON?) -> Result<U> {
+internal func decodeJSON<U: JSONDecodable>(_ json: JSON?) -> Result<U> {
     if let element = json as? JSONElement {
-        return resultFromOptional(U.decode(element), error: .ParsingFailure)
+        return resultFromOptional(U.decode(element), error: .parsingFailure)
     }
-    return Result.Error(.ParsingFailure)
+    return Result.error(.parsingFailure)
 }
 
-internal func decodeJSON<U: JSONDecodable>(json: JSON?) -> Result<[U]> {
+internal func decodeJSON<U: JSONDecodable>(_ json: JSON?) -> Result<[U]> {
     let result = [U]()
     if let elements = json as? [JSONElement] {
         var result = [U]()
         for element in elements {
-            let decodable : Result<U> = decodeJSON(element)
+            let decodable : Result<U> = decodeJSON(element as JSON?)
             switch decodable {
-            case .Success(let value): result.append(value)
-            case .Error(let error): return Result.Error(error)
+            case .success(let value): result.append(value)
+            case .error(let error): return Result.error(error)
             }
         }
     }
-    return Result.Success(result)
+    return Result.success(result)
 }
 
 
@@ -487,54 +487,54 @@ internal func decodeJSON<U: JSONDecodable>(json: JSON?) -> Result<[U]> {
 //========================================
 
 
-private func htmlToData(html: NSString?) -> NSData? {
+private func htmlToData(_ html: NSString?) -> Data? {
     if let html = html {
-        let json = html.stringByReplacingOccurrencesOfString("<[^>]+>", withString: "", options: .RegularExpressionSearch, range: NSMakeRange(0, html.length))
-        return json.dataUsingEncoding(NSUTF8StringEncoding)
+        let json = html.replacingOccurrences(of: "<[^>]+>", with: "", options: .regularExpression, range: NSMakeRange(0, html.length))
+        return json.data(using: String.Encoding.utf8)
     }
     return nil
 }
 
 extension Dictionary : JSONParsable {
     public func content() -> JSON? {
-        return self as? JSON
+        return self
     }
 }
 
 extension Array : JSONParsable {
     public func content() -> JSON? {
-        return self as? JSON
+        return self
     }
 }
 
 extension String {
     internal func terminate() -> String {
         let terminator : Character = ";"
-        var trimmed = stringByTrimmingCharactersInSet(NSCharacterSet.whitespaceAndNewlineCharacterSet())
+        var trimmed = trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
         if (trimmed.characters.last != terminator) { trimmed += String(terminator) }
         return trimmed
     }
 }
 
-extension NSData {
+extension Data {
     internal func toString() -> String? {
-        return String(data: self, encoding: NSUTF8StringEncoding)
+        return String(data: self, encoding: String.Encoding.utf8)
     }
 }
 
 
-func dispatch_sync_on_main_thread(block: dispatch_block_t) {
-    if NSThread.isMainThread() {
+func dispatch_sync_on_main_thread(_ block: ()->()) {
+    if Thread.isMainThread {
         block()
     } else {
-        dispatch_sync(dispatch_get_main_queue(), block)
+        DispatchQueue.main.sync(execute: block)
     }
 }
 
-internal func delay(time: NSTimeInterval, completion: () -> Void) {
-    if let currentQueue = NSOperationQueue.currentQueue()?.underlyingQueue {
-        let delayTime = dispatch_time(DISPATCH_TIME_NOW, Int64(time * Double(NSEC_PER_SEC)))
-        dispatch_after(delayTime, currentQueue) {
+internal func delay(_ time: TimeInterval, completion: @escaping () -> Void) {
+    if let currentQueue = OperationQueue.current?.underlyingQueue {
+        let delayTime = DispatchTime.now() + Double(Int64(time * Double(NSEC_PER_SEC))) / Double(NSEC_PER_SEC)
+        currentQueue.asyncAfter(deadline: delayTime) {
             completion()
         }
     } else {
