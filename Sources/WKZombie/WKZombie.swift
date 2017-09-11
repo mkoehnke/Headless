@@ -30,7 +30,23 @@ public typealias SnapshotHandler = (Snapshot) -> Void
 public class WKZombie {
     
     private static var __once: () = {  Static.instance = WKZombie() }()
+  
+  
+
+  /// Result
+  public enum Result<T> {
+    case success(T)
+    case error(ActionError)
     
+    init(_ error: ActionError?, _ value: T) {
+      if let err = error {
+        self = .error(err)
+      } else {
+        self = .success(value)
+      }
+    }
+  }
+  
     /// A shared instance of `Manager`, used by top-level WKZombie methods,
     /// and suitable for multiple web sessions.
     public class var sharedInstance: WKZombie {

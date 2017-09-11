@@ -67,25 +67,8 @@ public enum SearchType<T: HTMLElement> {
     }
 }
 
-//========================================
-// MARK: Result
-//========================================
-
-public enum Result<T> {
-    case success(T)
-    case error(ActionError)
-    
-    init(_ error: ActionError?, _ value: T) {
-        if let err = error {
-            self = .error(err)
-        } else {
-            self = .success(value)
-        }
-    }
-}
-
-public extension Result where T:Collection {
-    public func first<A>() -> Result<A> {
+public extension WKZombie.Result where T:Collection {
+    public func first<A>() -> WKZombie.Result<A> {
         switch self {
         case .success(let result): return resultFromOptional(result.first as? A, error: .notFound)
         case .error(let error): return resultFromOptional(nil, error: error)
@@ -93,7 +76,7 @@ public extension Result where T:Collection {
     }
 }
 
-extension Result: CustomDebugStringConvertible {
+extension WKZombie.Result: CustomDebugStringConvertible {
     public var debugDescription: String {
         switch self {
         case .success(let value):
@@ -126,7 +109,7 @@ internal struct Response {
 }
 
 infix operator >>>: AdditionPrecedence
-internal func >>><A, B>(a: Result<A>, f: (A) -> Result<B>) -> Result<B> {
+internal func >>><A, B>(a: WKZombie.Result<A>, f: (A) -> WKZombie.Result<B>) -> WKZombie.Result<B> {
     switch a {
     case let .success(x):   return f(x)
     case let .error(error): return .error(error)
@@ -206,21 +189,21 @@ public func ===<T>(a: Action<T>, completion: @escaping (T?) -> Void) {
  - parameter a:          An Action.
  - parameter completion: An output function/closure.
  */
-public func ===<T>(a: Action<T>, completion: @escaping (Result<T>) -> Void) {
+public func ===<T>(a: Action<T>, completion: @escaping (WKZombie.Result<T>) -> Void) {
     return a.start { result in
         completion(result)
     }
 }
 
-internal func parseResponse(_ response: Response) -> Result<Data> {
+internal func parseResponse(_ response: Response) -> WKZombie.Result<Data> {
     let successRange = 200..<300
     if !successRange.contains(response.statusCode) {
         return .error(.networkRequestFailure)
     }
-    return Result(nil, response.data ?? Data())
+    return WKZombie.Result(nil, response.data ?? Data())
 }
 
-internal func resultFromOptional<A>(_ optional: A?, error: ActionError) -> Result<A> {
+internal func resultFromOptional<A>(_ optional: A?, error: ActionError) -> WKZombie.Result<A> {
     if let a = optional {
         return .success(a)
     } else {
@@ -228,13 +211,13 @@ internal func resultFromOptional<A>(_ optional: A?, error: ActionError) -> Resul
     }
 }
 
-internal func decodeResult<T: Page>(_ url: URL? = nil) -> (_ data: Data?) -> Result<T> {
-    return { (data: Data?) -> Result<T> in
+internal func decodeResult<T: Page>(_ url: URL? = nil) -> (_ data: Data?) -> WKZombie.Result<T> {
+    return { (data: Data?) -> WKZombie.Result<T> in
         return resultFromOptional(T.pageWithData(data, url: url) as? T, error: .networkRequestFailure)
     }
 }
 
-internal func decodeString(_ data: Data?) -> Result<String> {
+internal func decodeString(_ data: Data?) -> WKZombie.Result<String> {
     return resultFromOptional(data?.toString(), error: .transformFailure)
 }
 
@@ -245,7 +228,7 @@ internal func decodeString(_ data: Data?) -> Result<String> {
 //========================================
 
 public struct Action<T> {
-    public typealias ResultType = Result<T>
+    public typealias ResultType = WKZombie.Result<T>
     public typealias Completion = (ResultType) -> ()
     public typealias AsyncOperation = (@escaping Completion) -> ()
     
@@ -286,8 +269,8 @@ public extension Action {
             self.start { result in
                 DispatchQueue.main.async(execute: {
                     switch result {
-                    case .success(let value): completion(Result.success(f(value)))
-                    case .error(let error): completion(Result.error(error))
+                    case .success(let value): completion(WKZombie.Result.success(f(value)))
+                    case .error(let error): completion(WKZombie.Result.error(error))
                     }
                 })
             }
@@ -301,11 +284,11 @@ public extension Action {
                     switch result {
                     case .success(let value):
                         if let result = f(value) {
-                            completion(Result.success(result))
+                            completion(WKZombie.Result.success(result))
                         } else {
-                            completion(Result.error(.transformFailure))
+                            completion(WKZombie.Result.error(.transformFailure))
                         }
-                    case .error(let error): completion(Result.error(error))
+                    case .error(let error): completion(WKZombie.Result.error(error))
                     }
                 })
             }
@@ -319,7 +302,7 @@ public extension Action {
                 case .success(let value): f(value).start(completion)
                 case .error(let error):
                     DispatchQueue.main.async(execute: {
-                        completion(Result.error(error))
+                        completion(WKZombie.Result.error(error))
                     })
                 }
             }
@@ -356,12 +339,12 @@ public extension Action {
                             loop(f(newValue)).start(completion)
                         } else {
                             DispatchQueue.main.async(execute: {
-                                completion(Result.success(values))
+                                completion(WKZombie.Result.success(values))
                             })
                         }
                     case .error(let error):
                         DispatchQueue.main.async(execute: {
-                            completion(Result.error(error))
+                            completion(WKZombie.Result.error(error))
                         })
                     }
                 }
@@ -392,13 +375,13 @@ public extension Action {
                         group.leave()
                     case .error(let error):
                         DispatchQueue.main.async(execute: {
-                            completion(Result.error(error))
+                            completion(WKZombie.Result.error(error))
                         })
                     }
                 })
             }
             group.notify(queue: DispatchQueue.main) {
-                completion(Result.success(results))
+                completion(WKZombie.Result.success(results))
             }
         })
     }
@@ -442,7 +425,7 @@ public enum PostAction {
 public typealias JSON = Any
 public typealias JSONElement = [String : Any]
 
-internal func parseJSON<U: JSON>(_ data: Data) -> Result<U> {
+internal func parseJSON<U: JSON>(_ data: Data) -> WKZombie.Result<U> {
     var jsonOptional: U?
     var __error = ActionError.parsingFailure
     
@@ -458,26 +441,26 @@ internal func parseJSON<U: JSON>(_ data: Data) -> Result<U> {
     return resultFromOptional(jsonOptional, error: __error)
 }
 
-internal func decodeJSON<U: JSONDecodable>(_ json: JSON?) -> Result<U> {
+internal func decodeJSON<U: JSONDecodable>(_ json: JSON?) -> WKZombie.Result<U> {
     if let element = json as? JSONElement {
         return resultFromOptional(U.decode(element), error: .parsingFailure)
     }
-    return Result.error(.parsingFailure)
+    return WKZombie.Result.error(.parsingFailure)
 }
 
-internal func decodeJSON<U: JSONDecodable>(_ json: JSON?) -> Result<[U]> {
+internal func decodeJSON<U: JSONDecodable>(_ json: JSON?) -> WKZombie.Result<[U]> {
     let result = [U]()
     if let elements = json as? [JSONElement] {
         var result = [U]()
         for element in elements {
-            let decodable : Result<U> = decodeJSON(element as JSON?)
+            let decodable : WKZombie.Result<U> = decodeJSON(element as JSON?)
             switch decodable {
             case .success(let value): result.append(value)
-            case .error(let error): return Result.error(error)
+            case .error(let error): return WKZombie.Result.error(error)
             }
         }
     }
-    return Result.success(result)
+    return WKZombie.Result.success(result)
 }
 
 
