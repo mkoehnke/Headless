@@ -137,7 +137,7 @@ public class JSONParser : Parser {
     
     required public init(data: Data, url: URL? = nil) {
         super.init(data: data, url: url)
-        let result : Result<JSON> = parseJSON(data)
+        let result : WKZombie.Result<JSON> = parseJSON(data)
         switch result {
         case .success(let json): self.json = json
         case .error: Logger.log("Error parsing JSON!")

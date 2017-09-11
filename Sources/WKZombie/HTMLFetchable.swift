@@ -67,7 +67,7 @@ extension HTMLFetchable {
 
 public protocol HTMLFetchableContent {
     associatedtype ContentType
-    static func instanceFromData(_ data: Data) -> Result<ContentType>
+    static func instanceFromData(_ data: Data) -> WKZombie.Result<ContentType>
 }
 
 //==========================================
@@ -78,18 +78,18 @@ public protocol HTMLFetchableContent {
     import UIKit
     extension UIImage : HTMLFetchableContent {
         public typealias ContentType = UIImage
-        public static func instanceFromData(_ data: Data) -> Result<ContentType> {
+        public static func instanceFromData(_ data: Data) -> WKZombie.Result<ContentType> {
             if let image = UIImage(data: data) {
-                return Result.success(image)
+                return WKZombie.Result.success(image)
             }
-            return Result.error(.transformFailure)
+            return WKZombie.Result.error(.transformFailure)
         }
     }
 #elseif os(OSX)
     import Cocoa
     extension NSImage : HTMLFetchableContent {
         public typealias ContentType = NSImage
-        public static func instanceFromData(_ data: Data) -> Result<ContentType> {
+        public static func instanceFromData(_ data: Data) -> WKZombie.Result<ContentType> {
             if let image = NSImage(data: data) {
                 return Result.success(image)
             }
@@ -100,7 +100,7 @@ public protocol HTMLFetchableContent {
 
 extension Data : HTMLFetchableContent {
     public typealias ContentType = Data
-    public static func instanceFromData(_ data: Data) -> Result<ContentType> {
-        return Result.success(data)
+    public static func instanceFromData(_ data: Data) -> WKZombie.Result<ContentType> {
+        return WKZombie.Result.success(data)
     }
 }
