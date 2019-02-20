@@ -431,7 +431,7 @@ The following example shows how to press a button that is embedded in an iframe:
 
 ```ruby
     browser.open(startURL())
->>> browser.get(by: .XPathQuery("//iframe[@name='button_frame']"))
+>>> browser.get(by: .XPathQuery("//frame[@name='button_frame']"))
 >>> browser.swap
 >>> browser.get(by: .id("button"))
 >>> browser.press
