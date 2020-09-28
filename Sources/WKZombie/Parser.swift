@@ -75,7 +75,7 @@ public class HTMLParser : Parser {
 }
 
 /// A HTML Parser Element class, which wraps the functionality of the TFHppleElement class.
-public class HTMLParserElement : CustomStringConvertible {
+public class HTMLParserElement : CustomStringConvertible, Initializable {
     fileprivate var element : TFHppleElement?
     public internal(set) var XPathQuery : String?
     
@@ -109,11 +109,11 @@ public class HTMLParserElement : CustomStringConvertible {
     }
     
     public func childrenWithTagName<T: HTMLElement>(_ tagName: String) -> [T]? {
-        return element?.children(withTagName: tagName).flatMap { T(element: $0 as AnyObject) }
+        return element?.children(withTagName: tagName).compactMap { T(element: $0 as AnyObject) }
     }
     
     public func children<T: HTMLElement>() -> [T]? {
-        return element?.children.flatMap { T(element:$0 as AnyObject) }
+        return element?.children.compactMap { T(element:$0 as AnyObject) }
     }
     
     public func hasChildren() -> Bool {
@@ -153,5 +153,7 @@ public class JSONParser : Parser {
     }
 }
 
-
+protocol Initializable {
+    init?(element: AnyObject, XPathQuery : String?)
+}
 

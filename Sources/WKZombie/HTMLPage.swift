@@ -52,7 +52,7 @@ public class HTMLPage : HTMLParser, Page {
     public func findElements<T>(_ searchType: SearchType<T>) -> Result<[T]> {
         let query = searchType.xPathQuery()
         if let parsedObjects = searchWithXPathQuery(query) , parsedObjects.count > 0 {
-            return resultFromOptional(parsedObjects.flatMap { T(element: $0, XPathQuery: query) }, error: .notFound)
+            return resultFromOptional(parsedObjects.compactMap { T(element: $0, XPathQuery: query) }, error: .notFound)
         }
         return Result.error(.notFound)
     }
